@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第3回 税と社会保障WS：実存的防衛支出と2フェーズ移行シミュレーター（環境省統計準拠版）</title>
+<style>
+    :root {
+        --bg-main: #0b1120;
+        --bg-card: #1e293b;
+        --bg-panel: #334155;
+        --text-main: #f8fafc;
+        --text-sub: #94a3b8;
+        --accent-blue: #38bdf8;
+        --accent-green: #4ade80;
+        --accent-amber: #fbbf24;
+        --accent-red: #f87171;
+        --accent-purple: #c084fc;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+        line-height: 1.6;
+    }
+
+    .container {
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 20px 24px 60px;
+    }
+
+    header {
+        border-bottom: 1px solid var(--bg-panel);
+        padding-bottom: 16px;
+        margin-bottom: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    .title-area h1 { margin: 0; font-size: 22px; color: var(--accent-blue); }
+    .title-area p { margin: 4px 0 0; font-size: 13px; color: var(--text-sub); }
+
+    .nav-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tab-btn {
+        background: var(--bg-card);
+        color: var(--text-sub);
+        border: 1px solid var(--bg-panel);
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .tab-btn:hover { color: var(--text-main); border-color: var(--accent-blue); }
+    .tab-btn.active {
+        background: var(--accent-blue);
+        color: var(--bg-main);
+        border-color: var(--accent-blue);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .grid-main {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 24px;
+    }
+    @media (max-width: 980px) {
+        .grid-main { grid-template-columns: 1fr; }
+    }
+
+    .card {
+        background: var(--bg-card);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        margin-bottom: 20px;
+    }
+    .card-title {
+        font-size: 15px;
+        font-weight: bold;
+        color: var(--accent-blue);
+        margin: 0 0 14px 0;
+        border-left: 4px solid var(--accent-blue);
+        padding-left: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .ctrl-group {
+        margin-bottom: 18px;
+        padding-bottom: 14px;
+        border-bottom: 1px dashed rgba(255,255,255,0.1);
+    }
+    .ctrl-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .ctrl-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 6px;
+    }
+    .ctrl-label { font-size: 14px; font-weight: bold; }
+    .ctrl-val { font-size: 18px; font-weight: bold; color: var(--accent-blue); }
+    .ctrl-note { font-size: 11.5px; color: var(--text-sub); margin-top: 4px; }
+
+    input[type="range"] {
+        width: 100%;
+        height: 8px;
+        background: var(--bg-panel);
+        border-radius: 4px;
+        outline: none;
+        -webkit-appearance: none;
+        cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        background: var(--accent-blue);
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .mini-btn {
+        background: rgba(56, 189, 248, 0.12);
+        color: var(--accent-blue);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        padding: 7px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        flex: 1;
+        text-align: center;
+    }
+    .mini-btn:hover, .mini-btn.active {
+        background: var(--accent-blue);
+        color: var(--bg-main);
+    }
+
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+    .kpi-box {
+        background: rgba(15, 23, 42, 0.6);
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.06);
+    }
+    .kpi-title { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+    .kpi-num { font-size: 23px; font-weight: bold; }
+    .kpi-sub { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+
+    .phase-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+    }
+    @media (max-width: 768px) {
+        .phase-grid { grid-template-columns: 1fr; }
+    }
+    .phase-col {
+        background: rgba(15, 23, 42, 0.55);
+        border-radius: 10px;
+        padding: 15px;
+        border-top: 4px solid var(--accent-blue);
+    }
+    .phase-col h4 { margin: 0 0 8px 0; font-size: 14px; }
+    .phase-metric {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12.5px;
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .phase-story {
+        margin-top: 10px;
+        font-size: 11.5px;
+        color: #cbd5e1;
+        background: rgba(255,255,255,0.04);
+        padding: 8px;
+        border-radius: 6px;
+    }
+
+    .bar-item { margin-bottom: 12px; }
+    .bar-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+    .bar-bg { width: 100%; height: 18px; background: rgba(15,23,42,0.8); border-radius: 5px; overflow: hidden; }
+    .bar-fill { height: 100%; transition: width 0.4s ease; border-radius: 5px; }
+
+    .burden-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 10px;
+    }
+    @media (max-width: 800px) {
+        .burden-grid { grid-template-columns: 1fr; }
+    }
+    .burden-box {
+        background: rgba(15, 23, 42, 0.5);
+        padding: 14px;
+        border-radius: 8px;
+        border-left: 3px solid var(--accent-amber);
+        font-size: 12.5px;
+    }
+
+    .compare-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    @media (max-width: 800px) {
+        .compare-grid { grid-template-columns: 1fr; }
+    }
+    .risk-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
+        margin-top: 10px;
+    }
+    .risk-table th, .risk-table td {
+        padding: 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        text-align: left;
+    }
+    .risk-table th { color: var(--text-sub); font-size: 12px; }
+
+    .essay-box {
+        max-width: 900px;
+        margin: 0 auto;
+        background: var(--bg-card);
+        padding: 32px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .essay-box h2 { color: var(--accent-blue); margin-top: 0; border-bottom: 1px solid var(--bg-panel); padding-bottom: 12px; }
+    .essay-box h3 { color: var(--accent-amber); margin-top: 28px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="title-area">
+            <h1>🌐 第3回「税と社会保障のWS」動的政策レポート（環境省統計・産業負担反映版）</h1>
+            <p>実存的防衛支出（気候適応・サイバー・AI Doom）と、炭素配当からベーシックサービスへの2フェーズ移行モデル</p>
+        </div>
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-sim', this)">① 2フェーズ＆家計・産業負担シミュレーター</button>
+            <button class="tab-btn" onclick="switchTab('tab-risk', this)">② 実存的防衛7兆円 vs 放置の破局コスト</button>
+            <button class="tab-btn" onclick="switchTab('tab-doom', this)">③ 【別紙】AI Doomと分散型インフラ特論</button>
+        </div>
+    </header>
+
+    <!-- ==========================================
+         タブ1：メインシミュレーター
+         ========================================== -->
+    <div id="tab-sim" class="tab-content active">
+        <div class="grid-main">
+            <!-- 左側：操作パネル -->
+            <div>
+                <div class="card">
+                    <div class="card-title">シナリオ・プリセット</div>
+                    <div class="preset-row">
+                        <button class="mini-btn active" onclick="setScenario(15000, 20, 3.0, this)">① 標準移行<br>(1.5万/税20%)</button>
+                        <button class="mini-btn" onclick="setScenario(35000, 20, 4.0, this)">② 加速移行<br>(3.5万/税20%)</button>
+                        <button class="mini-btn" onclick="setScenario(72000, 22, 5.0, this)">③ 月5万BI起動<br>(7.2万/税22%)</button>
+                    </div>
+
+                    <div class="ctrl-group">
+                        <div class="ctrl-header">
+                            <span class="ctrl-label">① フェーズ1 炭素税額（円/t）</span>
+                            <span class="ctrl-val" id="lbl-ctax">15,000 円</span>
+                        </div>
+                        <input type="range" id="rng-ctax" min="5000" max="75000" step="1000" value="15000" oninput="calcAll()">
+                        <div class="ctrl-note">※税額が高いほど5年間の脱炭素速度が自動加速し、逆に6年目以降の「残存炭素税収」は減少します。</div>
+                    </div>
+
+                    <div class="ctrl-group">
+                        <div class="ctrl-header">
+                            <span class="ctrl-label">② フェーズ2 消費税率（6年目〜）</span>
+                            <span class="ctrl-val" id="lbl-vat">20 %</span>
+                        </div>
+                        <input type="range" id="rng-vat" min="10" max="25" step="1" value="20" oninput="calcAll()">
+                        <div class="ctrl-note" id="vat-mechanism-note">※標準・加速移行では20%で49兆円を充足。月5万BI（7.2万円/t）時は脱炭素が60%超進み炭素税が枯渇するため22%が必要となります。</div>
+                    </div>
+
+                    <div class="ctrl-group">
+                        <div class="ctrl-header">
+                            <span class="ctrl-label">③ デジタル炭素原単位課税（兆円）</span>
+                            <span class="ctrl-val" id="lbl-dtax">3.0 兆円</span>
+                        </div>
+                        <input type="range" id="rng-dtax" min="1.0" max="8.0" step="0.5" value="3.0" oninput="calcAll()">
+                        <div class="ctrl-note">※非効率な巨大データセンター・AIに対するPUE・非再エネ累進課税（杉並モデルの国税版）。</div>
+                    </div>
+
+                    <div class="ctrl-group">
+                        <div class="ctrl-header">
+                            <span class="ctrl-label">🏠 検証するサンプル世帯（4類型）</span>
+                        </div>
+                        <select id="sel-household" onchange="calcAll()" style="width:100%; padding:10px; border-radius:6px; background:var(--bg-main); color:var(--text-main); border:1px solid var(--accent-blue); font-size:13.5px; font-weight:bold;">
+                            <option value="family">① 子育て4人世帯（郊外戸建・車1台・15.2t）</option>
+                            <option value="single">② 単身ワーカー（都市集合住宅・車なし・5.3t）</option>
+                            <option value="senior">③ 高齢者2人世帯（持ち家・軽乗用車・9.8t）</option>
+                            <option value="wealthy">④ 高所得・多消費世帯（大型車2台・航空機・34.0t）</option>
+                        </select>
+                        <div class="ctrl-note" style="margin-top:8px; color:#cbd5e1;" id="hh-co2-breakdown">
+                            【環境省令和7年度統計準拠の内訳】<br>
+                            住宅直接排出(電気・ガス・灯油): 3.5t ＋ ガソリン: 2.2t ＋ 購入商品の価格転嫁(間接負担): 9.5t ＝ <strong>実質負担 15.2t-CO2/年</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：結果表示 -->
+            <div>
+                <!-- 上段KPI -->
+                <div class="kpi-row">
+                    <div class="kpi-box">
+                        <div class="kpi-title">フェーズ1 炭素配当（1人あたり）</div>
+                        <div class="kpi-num" style="color:var(--accent-green);" id="out-bi-person">年 12.5 万円</div>
+                        <div class="kpi-sub" id="out-bi-month">月額 10,417 円 ／ 4人世帯：年50万円</div>
+                    </div>
+                    <div class="kpi-box">
+                        <div class="kpi-title">5年間の脱炭素スピード（価格弾力性）</div>
+                        <div class="kpi-num" style="color:var(--accent-amber);" id="out-decarb-speed">CO2 -25 %</div>
+                        <div class="kpi-sub" id="out-ev-insul">断熱・EV移行率：5年で +36% 加速</div>
+                    </div>
+                    <div class="kpi-box">
+                        <div class="kpi-title">フェーズ1 自然増収ボーナス</div>
+                        <div class="kpi-num" style="color:var(--accent-blue);" id="out-nat-rev">+ 3.0 兆円/年</div>
+                        <div class="kpi-sub">配当の消費喚起＆省エネ投資の乗数効果</div>
+                    </div>
+                    <div class="kpi-box">
+                        <div class="kpi-title">フェーズ2 国民負担率（BS完成後）</div>
+                        <div class="kpi-num" style="color:var(--accent-purple);" id="out-burden-rate">57.7 %</div>
+                        <div class="kpi-sub" id="out-bs-cover">49兆円財源カバー率：100% 達成</div>
+                    </div>
+                </div>
+
+                <!-- 中段：時系列シミュレーション -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>⏱️ 時系列シミュレーション：直接・間接負担と家計収支の推移</span>
+                        <span style="font-size:12px; color:var(--accent-amber);" id="hh-badge">対象：① 子育て4人世帯（実質負担15.2t）</span>
+                    </div>
+                    <div class="phase-grid">
+                        <!-- 1年目 -->
+                        <div class="phase-col" style="border-top-color: var(--accent-green);">
+                            <h4>【1年目】炭素配当スタート</h4>
+                            <div class="phase-metric"><span>ガソリン価格 / 電気代増</span><strong id="p1-gas">205 円/L</strong></div>
+                            <div class="phase-metric"><span>世帯の受取配当(頭割りBI)</span><strong style="color:var(--accent-green);" id="p1-bi">+50.0 万円</strong></div>
+                            <div class="phase-metric"><span>光熱・燃料・物価転嫁負担</span><strong style="color:var(--accent-red);" id="p1-cost">-22.8 万円</strong></div>
+                            <div class="phase-metric"><span>年間実質収支</span><strong style="font-size:15px;" id="p1-net">+27.2 万円</strong></div>
+                            <div class="phase-story" id="p1-story">
+                                電気・ガス・ガソリンに加え商品の値上がり（間接転嫁）を含めても、産業部門からの移転と頭割り配当により家計はプラスに。
+                            </div>
+                        </div>
+
+                        <!-- 5年目 -->
+                        <div class="phase-col" style="border-top-color: var(--accent-amber);">
+                            <h4>【5年目】BI最終年・駆け込み投資</h4>
+                            <div class="phase-metric"><span>社会全体のCO2削減</span><strong id="p5-co2">-25 %</strong></div>
+                            <div class="phase-metric"><span>世帯の受取配当(総額減)</span><strong style="color:var(--accent-green);" id="p5-bi">+37.5 万円</strong></div>
+                            <div class="phase-metric"><span>断熱・EV化後の負担</span><strong style="color:var(--accent-amber);" id="p5-cost">-12.5 万円</strong></div>
+                            <div class="phase-metric"><span>年間実質収支</span><strong style="font-size:15px;" id="p5-net">+25.0 万円</strong></div>
+                            <div class="phase-story" id="p5-story">
+                                「来年からBIが終わり消費税が上がる！」という予告により、貯めた配当で内窓断熱・エコキュート・EVへ一斉に駆け込み投資。
+                            </div>
+                        </div>
+
+                        <!-- 6年目以降 -->
+                        <div class="phase-col" style="border-top-color: var(--accent-purple);">
+                            <h4>【6年目〜】消費増税＋完全BS化</h4>
+                            <div class="phase-metric"><span>現金配当 / 消費税</span><strong id="p6-tax">0円 / 税率20%</strong></div>
+                            <div class="phase-metric"><span>消費増税による負担増</span><strong style="color:var(--accent-red);" id="p6-vat-cost">-30.0 万円</strong></div>
+                            <div class="phase-metric"><span>BS無償化＋光熱費削減便益</span><strong style="color:var(--accent-green);" id="p6-bs-benefit">+78.5 万円</strong></div>
+                            <div class="phase-metric"><span>年間実質メリット</span><strong style="font-size:15px;" id="p6-net">+48.5 万円相当</strong></div>
+                            <div class="phase-story" id="p6-story">
+                                教育・医療・介護・地域交通が完全無償化（BS）。断熱とEVで光熱費・燃料代も極小化されているため、増税後も暮らしは安定。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 新設：誰が負担しているのか？（産業部門と多消費層の負担構造） -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>⚖️ なぜ一般世帯（①〜③）がプラスになるのか？ ― 炭素税の「負担と還流」の構造</span>
+                    </div>
+                    <div style="font-size:13px; color:#cbd5e1; margin-bottom:10px;">
+                        環境省「令和7年度 家庭部門のCO2排出実態統計（速報値）」において、1世帯あたりの住宅内排出量（電気・ガス・灯油）は<strong>平均2.51トン</strong>（日本全体の約15%）に過ぎません。残りの約85%は産業・業務・運輸部門から排出されています。一般世帯が黒字になる原資は、以下の<strong>3つの支払い超過セクターからの富の移転</strong>によって賄われています。
+                    </div>
+                    <div class="burden-grid">
+                        <div class="burden-box">
+                            <strong style="color:var(--accent-amber);">① 産業・輸出・業務部門の純負担（税収の約45%）：</strong><br>
+                            鉄鋼・化学・電力・巨大データセンター等に課された炭素税のうち、国内消費者に価格転嫁できない分（輸出向け製品、企業の内部留保からの支払い、法人経費・社用移動分）は、法人には配当（BI）が配られないため、すべて「個人への配当プール」へ純移転します。
+                        </div>
+                        <div class="burden-box" style="border-left-color:var(--accent-red);">
+                            <strong style="color:var(--accent-red);">② 高所得・多消費世帯＆訪日客の純負担（プルダウン④）：</strong><br>
+                            頭割り配当は全員同じ額（平均値）ですが、実際のエネルギー消費は上位10〜20%の富裕層（大型車・豪邸・航空機利用）と年間数千万人の外国人観光客（配当対象外）に偏っています。この層の支払い超過分が、一般世帯・子育て世帯の黒字を支えます。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 下段：49兆円の財源パズルと「月5万BI＝消費税22%」のメカニズム -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>🏛️ フェーズ2における「49兆円（社会保障42兆＋実存防衛7兆）」の財源構成</span>
+                        <span id="total-fund-label" style="color:var(--accent-green);">合計調達額：49.2 兆円</span>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-head"><span>① 消費税引き上げ分（動学名目成長ベース：1%＝3.0兆円）</span><strong id="f-vat">30.0 兆円</strong></div>
+                        <div class="bar-bg"><div class="bar-fill" id="bf-vat" style="width:60%; background:var(--accent-blue);"></div></div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar-head"><span>② 残存炭素税（脱炭素が進むほど縮小）＋ デジタル炭素原単位課税</span><strong id="f-carbon">9.2 兆円</strong></div>
+                        <div class="bar-bg"><div class="bar-fill" id="bf-carbon" style="width:20%; background:var(--accent-green);"></div></div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar-head"><span>③ 金融所得・富裕層課税・法人税改革（第2回WS合意枠）</span><strong id="f-wealth">6.0 兆円</strong></div>
+                        <div class="bar-bg"><div class="bar-fill" id="bf-wealth" style="width:15%; background:var(--accent-purple);"></div></div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar-head"><span>④ 再エネ国産化（海外への化石燃料代流出ストップ）に伴う国内自然増収</span><strong id="f-nat">4.0 兆円</strong></div>
+                        <div class="bar-bg"><div class="bar-fill" id="bf-nat" style="width:12%; background:var(--accent-amber);"></div></div>
+                    </div>
+
+                    <div style="margin-top:14px; padding:12px; background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.25); border-radius:8px; font-size:12.5px;" id="mechanism-explain-box">
+                        💡 <strong>【なぜ「月5万円BI（7.2万円/t）」の時だけ消費税22%が必要なのか？】</strong><br>
+                        炭素税1.5万〜3.5万円/tでは5年後のCO2削減率が25〜38%にとどまるため、フェーズ2でも「残存炭素税収（約6〜7兆円）」が残り、消費税20%で49兆円に到達します。一方、月5万円BI（7.2万円/t）を発動すると、猛烈な駆け込み投資でCO2が<strong>62%激減</strong>し、フェーズ2で従来の炭素税収が枯渇します。この「脱炭素の大成功による炭素税減収分（約6兆円＝消費税2%相当）」を穴埋めするため、月5万円BIシナリオのみフェーズ2の消費税率が<strong>22%</strong>となります。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         タブ2：実存的防衛支出（7兆円）vs 放置の破局コスト
+         ========================================== -->
+    <div id="tab-risk" class="tab-content">
+        <div class="card">
+            <div class="card-title">
+                <span>🛡️ なぜ「社会保障42兆円」とは別に「年7.0兆円の実存的防衛支出」が不可欠なのか？</span>
+            </div>
+            <p style="font-size:14px; color:#cbd5e1; margin-top:0;">
+                気候変動の激甚化（都市型内水氾濫）、重要インフラへのサイバー・ドローン攻撃、そして未制御のAI開発競争は、ひとたび破局（カタストロフ）が起きれば社会保障制度そのものを吹き飛ばします。年7兆円の先行投資を行わず「後手後手の事後対応」に回った場合、10年間で累計3倍以上の財政破綻コストが発生します。
+            </p>
+
+            <div class="compare-grid" style="margin-top:20px;">
+                <div class="card" style="background:rgba(34, 197, 94, 0.08); border-color:rgba(74, 222, 128, 0.3); margin-bottom:0;">
+                    <h3 style="margin-top:0; color:var(--accent-green);">⭕ 先行投資シナリオ（本提案：年7.0兆円）</h3>
+                    <p style="font-size:13px;"><strong>10年間の計画支出：70兆円（年間7.0兆円×10年）</strong></p>
+                    <ul style="font-size:13px; padding-left:20px;">
+                        <li><strong>内水氾濫・熱波適応（年3.5兆円）：</strong> 全下水管の掘削（100兆円超で人手不足により不可能）ではなく、雨水浸透グリーンインフラ＋AI先行排水制御＋公共・住宅断熱化で被害を8割抑止。</li>
+                        <li><strong>サイバー＆対ドローン防衛（年2.0兆円）：</strong> 自治体・病院・電力網のゼロトラスト化と、変電所等の対ドローン防護・分散化を完了。</li>
+                        <li><strong>AIアライメント＆国際規制（年1.5兆円）：</strong> フロンティアAI開発費の10%相当を安全検証と国際ロビー活動に投じ、暴走リスクを抑止。</li>
+                    </ul>
+                    <div style="margin-top:15px; padding:10px; background:rgba(0,0,0,0.3); border-radius:6px; font-weight:bold; color:var(--accent-green);">
+                        結果：国内の建設・IT・研究需要を毎年7兆円喚起しつつ、破局的被害をゼロに抑え込む。
+                    </div>
+                </div>
+
+                <div class="card" style="background:rgba(248, 113, 113, 0.08); border-color:rgba(248, 113, 113, 0.3); margin-bottom:0;">
+                    <h3 style="margin-top:0; color:var(--accent-red);">❌ 放置・後手後手シナリオ（緊縮・従来路線）</h3>
+                    <p style="font-size:13px;"><strong>10年間の事後復旧・損失コスト：推定 210兆円超</strong></p>
+                    <ul style="font-size:13px; padding-left:20px;">
+                        <li><strong>首都圏・主要都市の大規模内水氾濫＆熱波（約95兆円）：</strong> 地下街・地下鉄・変電設備の水没と、毎年激増する救急搬送・農作物壊滅による経済損失と復興国債の乱発。</li>
+                        <li><strong>重要インフラの全面停止・身代金被害（約55兆円）：</strong> 病院・水道・港湾・行政システムの長期ロックダウンとサプライチェーン崩壊。</li>
+                        <li><strong>AI暴走・自律兵器テロ・大量失業ショック（約60兆円〜計測不能）：</strong> 中央集権型データセンターへのドローン攻撃や、規制なきAI置換による社会秩序の崩壊。</li>
+                    </ul>
+                    <div style="margin-top:15px; padding:10px; background:rgba(0,0,0,0.3); border-radius:6px; font-weight:bold; color:var(--accent-red);">
+                        結果：年7兆円を惜しんだ結果、3倍以上の赤字国債とインフレで社会保障そのものが崩壊する。
+                    </div>
+                </div>
+            </div>
+
+            <table class="risk-table" style="margin-top:24px;">
+                <thead>
+                    <tr>
+                        <th>実存的防衛項目</th>
+                        <th>年額予算</th>
+                        <th>積算根拠・アーキテクチャ上の役割</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>① 気候変動激化・内水氾濫適応費</strong></td>
+                        <td style="color:var(--accent-blue); font-weight:bold;">3.5 兆円</td>
+                        <td>現行の上下水道・治水予算を約3倍に拡充。施工労働力の限界を踏まえ、掘削を伴わない透水性舗装・各戸雨水貯留・AI水門制御・断熱改修へ集中配分。</td>
+                    </tr>
+                    <tr>
+                        <td><strong>② 官民サイバー＆物理インフラ防衛費</strong></td>
+                        <td style="color:var(--accent-blue); font-weight:bold;">2.0 兆円</td>
+                        <td>GDPの0.3%（1.8兆円）を基準とした自治体・医療・電力・中小企業のゼロトラスト防衛網構築＋重要施設の対ドローン防護（0.2兆円）。</td>
+                    </tr>
+                    <tr>
+                        <td><strong>③ AI Doom・アライメント安全保障費</strong></td>
+                        <td style="color:var(--accent-blue); font-weight:bold;">1.5 兆円</td>
+                        <td>巨大テックのモデル開発費（数兆〜10兆円）の約10%を国家の安全検証・アライメント技術開発・開発速度を抑制する国際条約ロビー活動へ投入。</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         タブ3：別紙 AI Doomと分散型インフラ特論
+         ========================================== -->
+    <div id="tab-doom" class="tab-content">
+        <div class="essay-box">
+            <h2>【別紙特論】AIが人知を超える時代（AGI）における「インフラ分散化」と「中間コミュニティ」の設計</h2>
+            <p>
+                本レポートで「デジタル炭素原単位課税」および「AI Doom（実存的リスク）対応費1.5兆円」を計上した背景には、単なる電力問題を超えた、今後5〜10年で人類が直面する2つの構造的危機がある。
+            </p>
+
+            <h3>1. 「労働力不足の解消」と「知的労働の終焉」という表裏一体の衝撃</h3>
+            <p>
+                フェーズ2において、医療・介護・教育・公共交通をベーシックサービス（BS）として無償提供しようとすれば、最大のボトルネックはお金ではなく「現場の労働力不足」となる。これを解決できるのは、自動運転EVバスやAI診断補助、AIチューターといった高度なAIの実装以外にない。
+            </p>
+            <p>
+                しかし、すでに最先端のAIは未解決の数学定理の証明や高度なコード記述において人間の専門家を凌駕し始めている。汎用人工知能（AGI）が完成すれば、社会のインフラ維持コストが劇的に下がる一方で、「人間が頭脳労働で付加価値を生む」という近代資本主義の前提そのものが崩壊する。同時に、人間の理解を超えたブラックボックス化したAIが暴走するリスク（AI Doom）を抑え込むため、国家主導でのアライメント（安全性制御）研究と、無秩序な開発競争を減速させる国際ロビー活動が死活的に重要となる。
+            </p>
+
+            <h3>2. 「ドローン×ルサンチマン」の非対称脅威と、データセンターの徹底分散化</h3>
+            <p>
+                現代のテクノロジーは、防衛力（守るコスト）に対して攻撃力（破壊するコスト）を異常なまでに引き下げた。数十万円の自律型ドローンやAIサイバー攻撃によって、数百億円の巨大データセンターや変電所が容易に破壊され得る「極めて不安定な社会」が到来している。
+            </p>
+            <p>
+                もし、ベーシックサービスを支えるAI基盤が一握りの巨大データセンター（単一障害点）に集中していればどうなるか。急速な社会変化やコミュニティから取り残され、強い孤独とルサンチマン（怨嗟）を抱えた個人が、社会の心臓部であるデータセンターへドローン攻撃を行うリスクは極めて高い。
+            </p>
+            <p>
+                これを防ぐ唯一のアーキテクチャが、<strong>「杉並モデル（デジタル原単位規制）」を起点とした計算資源の徹底的な地域分散化（エッジ・メッシュ化）</strong>である。巨大で非効率なデータセンターに重課税（デジタル炭素原単位課税）を課す一方、再エネ100%・排熱利用・地域分散型の小型AIノードを非課税で優遇することで、どこか一箇所が攻撃されても絶対に止まらない強靭な社会OSを構築できる。
+            </p>
+
+            <h3>3. 結論：マクロの自動化と、ミクロの「開かれた中間コミュニティ」</h3>
+            <p>
+                生存のための基礎インフラ（医療・教育・交通・エネルギー・AI防衛）は、国家と高効率AIによってマクロに保障する。その上で、労働の呪縛から解放された市民は、住み慣れた街の「中間コミュニティ（地域自治・文化・ケア）」や、同調圧力から自由な「仮想空間のコミュニティ」へと参加し、人間らしい創造的な時間を謳歌する。この「冷徹なインフラ防衛」と「温かい人間の居場所」の両立こそが、私たちが目指すべき次代のグランドデザインである。
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(tabId, btnEl) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btnEl.classList.add('active');
+    }
+
+    function setScenario(ctax, vat, dtax, btnEl) {
+        document.getElementById('rng-ctax').value = ctax;
+        document.getElementById('rng-vat').value = vat;
+        document.getElementById('rng-dtax').value = dtax;
+        document.querySelectorAll('.mini-btn').forEach(b => b.classList.remove('active'));
+        if (btnEl) btnEl.classList.add('active');
+        calcAll();
+    }
+
+    function calcAll() {
+        const ctax = parseFloat(document.getElementById('rng-ctax').value); // 円/t
+        const vat = parseFloat(document.getElementById('rng-vat').value);   // %
+        const dtax = parseFloat(document.getElementById('rng-dtax').value); // 兆円
+        const hhType = document.getElementById('sel-household').value;
+
+        // ラベル更新
+        document.getElementById('lbl-ctax').innerText = ctax.toLocaleString() + " 円";
+        document.getElementById('lbl-vat').innerText = vat + " %";
+        document.getElementById('lbl-dtax').innerText = dtax.toFixed(1) + " 兆円";
+
+        // 1. フェーズ1の炭素税収と配当（初期排出量10億トン、人口1.2億人）
+        const revY1 = 10.0 * (ctax / 10000); // 兆円
+        const biPersonY1 = (revY1 / 1.2); // 万円/人/年
+        const biMonthY1 = Math.round((biPersonY1 * 10000) / 12);
+
+        // 2. 炭素税の高さに応じた「5年間の脱炭素スピード（価格弾力性モデル）」
+        // 1.5万円で-25%、3.5万円で-38%、7.2万円で-62%まで加速
+        const decarb5Y = Math.min(0.68, 0.15 + (ctax / 100000) * 0.65);
+        const decarbPct = Math.round(decarb5Y * 100);
+        const evInsulSpeed = Math.min(95, Math.round(decarbPct * 1.45));
+
+        // 3. 自然増収ボーナス（配当総額の20%が国内消費・投資乗数で還流）
+        const natRevP1 = revY1 * 0.20;
+
+        // 4. フェーズ2（6年目以降）の財源パズル（目標49兆円＝社会保障42兆＋実存防衛7兆）
+        // ここで「7.2万円/tの時は脱炭素が62%進み、かつ化石燃料から一気に離脱するため残存炭素税収がほぼ枯渇する」動きを表現
+        const vatRevDiff = (vat - 10) * 3.0; // 動学モデル 1% = 3.0兆円
+        // 残存炭素税収：1.5万〜3.5万円時は約6.2兆円残るが、7.2万円時は急激なEV・再エネシフト完了により約0.8兆円まで縮小する
+        const remainCarbonTaxRev = Math.max(0.5, 8.2 * (1 - Math.pow(decarb5Y / 0.68, 1.8)));
+        const carbonAndDigitalRev = remainCarbonTaxRev + dtax;
+        const wealthCorpRev = 6.0; // 第2回WS合意ベース
+        const greenNatRevP2 = 4.0; // 国産再エネ化による国内還流ベース
+
+        const totalFundP2 = vatRevDiff + carbonAndDigitalRev + wealthCorpRev + greenNatRevP2;
+        const coverRate = Math.min(130, Math.round((totalFundP2 / 49.0) * 100));
+
+        // 国民負担率
+        const burdenRate = 46.0 + ((totalFundP2 / 420) * 100);
+
+        // KPI表示更新
+        document.getElementById('out-bi-person').innerText = "年 " + biPersonY1.toFixed(1) + " 万円";
+        document.getElementById('out-bi-month').innerText = `月額 ${biMonthY1.toLocaleString()} 円 ／ 4人世帯：年 ${(biPersonY1*4).toFixed(0)} 万円`;
+        document.getElementById('out-decarb-speed').innerText = `CO2 -${decarbPct} %`;
+        document.getElementById('out-ev-insul').innerText = `断熱・EV移行率：5年で +${evInsulSpeed}% 加速`;
+        document.getElementById('out-nat-rev').innerText = `+ ${natRevP1.toFixed(1)} 兆円/年`;
+        document.getElementById('out-burden-rate').innerText = `${burdenRate.toFixed(1)} %`;
+        document.getElementById('out-bs-cover').innerText = `49兆円財源カバー率：${coverRate}% (${totalFundP2.toFixed(1)}兆円)`;
+
+        // 財源バー更新
+        document.getElementById('total-fund-label').innerText = `合計調達額：${totalFundP2.toFixed(1)} 兆円 （目標 49.0 兆円）`;
+        document.getElementById('total-fund-label').style.color = totalFundP2 >= 48.8 ? "var(--accent-green)" : "var(--accent-amber)";
+
+        document.getElementById('f-vat').innerText = `${vatRevDiff.toFixed(1)} 兆円`;
+        document.getElementById('bf-vat').style.width = Math.min(100, (vatRevDiff / 49) * 100) + "%";
+
+        document.getElementById('f-carbon').innerText = `${carbonAndDigitalRev.toFixed(1)} 兆円 (残存炭素税 ${remainCarbonTaxRev.toFixed(1)}兆 ＋ デジタル税 ${dtax.toFixed(1)}兆)`;
+        document.getElementById('bf-carbon').style.width = Math.min(100, (carbonAndDigitalRev / 49) * 100) + "%";
+
+        document.getElementById('f-wealth').innerText = `${wealthCorpRev.toFixed(1)} 兆円`;
+        document.getElementById('bf-wealth').style.width = Math.min(100, (wealthCorpRev / 49) * 100) + "%";
+
+        document.getElementById('f-nat').innerText = `${greenNatRevP2.toFixed(1)} 兆円`;
+        document.getElementById('bf-nat').style.width = Math.min(100, (greenNatRevP2 / 49) * 100) + "%";
+
+        // 世帯別シミュレーション（環境省令和7年度調査：平均2.51tをベースにガソリン・間接排出を加算）
+        let members = 4, directHome = 3.5, directGas = 2.2, indirectScope3 = 9.5;
+        let baseConsump = 300, bsBenefit = 65.0;
+        let hhName = "① 子育て4人世帯（郊外戸建・車1台・実質15.2t）";
+
+        if (hhType === "single") {
+            members = 1; directHome = 1.6; directGas = 0.0; indirectScope3 = 3.7;
+            baseConsump = 150; bsBenefit = 22.0;
+            hhName = "② 単身ワーカー（都市集合住宅・車なし・実質5.3t）";
+        } else if (hhType === "senior") {
+            members = 2; directHome = 2.8; directGas = 1.2; indirectScope3 = 5.8;
+            baseConsump = 210; bsBenefit = 58.0;
+            hhName = "③ 高齢者2人世帯（持ち家・軽乗用車・実質9.8t）";
+        } else if (hhType === "wealthy") {
+            members = 2; directHome = 6.5; directGas = 7.5; indirectScope3 = 20.0;
+            baseConsump = 650; bsBenefit = 25.0;
+            hhName = "④ 高所得・多消費世帯（大型車2台・航空機・実質34.0t）";
+        }
+
+        const baseCo2 = directHome + directGas + indirectScope3;
+        document.getElementById('hh-badge').innerText = "対象：" + hhName;
+        document.getElementById('hh-co2-breakdown').innerHTML =
+            `【環境省令和7年度統計準拠の内訳】<br>` +
+            `住宅直接(電気・ガス・灯油): ${directHome.toFixed(1)}t ＋ ガソリン等: ${directGas.toFixed(1)}t ＋ 購入商品の価格転嫁(間接負担): ${indirectScope3.toFixed(1)}t ＝ <strong>実質負担 ${baseCo2.toFixed(1)}t-CO2/年</strong>`;
+
+        const gasPriceY1 = Math.round(170 + (ctax / 10000) * 23.2);
+        const hhBiY1 = biPersonY1 * members;
+        const hhCostY1 = baseCo2 * (ctax / 10000);
+        const hhNetY1 = hhBiY1 - hhCostY1;
+
+        // 5年目：社会全体のCO2が減少した分、配当総額も減るが、世帯自身も断熱・EV化で直接排出をカット
+        const hhBiY5 = hhBiY1 * (1 - decarb5Y);
+        const hhCutRatio = hhType === "wealthy" ? Math.min(0.50, decarb5Y * 0.8) : Math.min(0.75, decarb5Y * 1.2);
+        const hhCostY5 = hhCostY1 * (1 - hhCutRatio);
+        const hhNetY5 = hhBiY5 - hhCostY5;
+
+        // 6年目：BI終了、消費税引き上げ、BS無償化便益＋光熱費削減便益
+        const vatCostY6 = baseConsump * ((vat - 10) / 100);
+        const energySavedBenefit = (directHome + directGas) * 2.4 * hhCutRatio;
+        const totalBenefitY6 = bsBenefit + energySavedBenefit;
+        const hhNetY6 = totalBenefitY6 - vatCostY6;
+
+        // 1年目描画
+        document.getElementById('p1-gas').innerText = `${gasPriceY1} 円/L`;
+        document.getElementById('p1-bi').innerText = `+${hhBiY1.toFixed(1)} 万円`;
+        document.getElementById('p1-cost').innerText = `-${hhCostY1.toFixed(1)} 万円`;
+        const p1NetEl = document.getElementById('p1-net');
+        p1NetEl.innerText = (hhNetY1 >= 0 ? "+" : "") + hhNetY1.toFixed(1) + " 万円";
+        p1NetEl.style.color = hhNetY1 >= 0 ? "var(--accent-green)" : "var(--accent-red)";
+
+        // 5年目描画
+        document.getElementById('p5-co2').innerText = `-${decarbPct} %`;
+        document.getElementById('p5-bi').innerText = `+${hhBiY5.toFixed(1)} 万円`;
+        document.getElementById('p5-cost').innerText = `-${hhCostY5.toFixed(1)} 万円`;
+        const p5NetEl = document.getElementById('p5-net');
+        p5NetEl.innerText = (hhNetY5 >= 0 ? "+" : "") + hhNetY5.toFixed(1) + " 万円";
+        p5NetEl.style.color = hhNetY5 >= 0 ? "var(--accent-green)" : "var(--accent-red)";
+
+        // 6年目描画
+        document.getElementById('p6-tax').innerText = `0円 / 税率${vat}%`;
+        document.getElementById('p6-vat-cost').innerText = `-${vatCostY6.toFixed(1)} 万円`;
+        document.getElementById('p6-bs-benefit').innerText = `+${totalBenefitY6.toFixed(1)} 万円`;
+        const p6NetEl = document.getElementById('p6-net');
+        p6NetEl.innerText = (hhNetY6 >= 0 ? "+" : "") + hhNetY6.toFixed(1) + " 万円相当";
+        p6NetEl.style.color = hhNetY6 >= 0 ? "var(--accent-purple)" : "var(--accent-red)";
+
+        // ストーリーの動的切り替え
+        if (hhType === "wealthy") {
+            document.getElementById('p1-story').innerText = "【純負担層】2人分の配当に対し、大型車・航空機・高額消費の間接負担が大きく上回るため大幅な赤字（支払い超過）となり、一般世帯への配当原資を負担します。";
+            document.getElementById('p5-story').innerText = "高い炭素税負担を回避するため、富裕層も自宅のZEH化やEVシフトを進めますが、多消費ライフスタイルにより依然として純負担層となります。";
+            document.getElementById('p6-story').innerText = "フェーズ2でも高い消費税負担（年間650万円消費）により純負担側となりますが、社会インフラの安定と治安維持の恩恵を受けます。";
+        } else {
+            document.getElementById('p1-story').innerText = "電気・ガス（環境省統計）＋ガソリン＋商品の値上がり（間接転嫁）をすべて含めても、産業部門・富裕層からの移転と頭割り配当により家計は黒字になります。";
+            document.getElementById('p5-story').innerText = "「来年からBIが終わり消費税が上がる！」という予告により、貯めた配当で二重窓（断熱）・エコキュート・EVへ一斉に駆け込み投資。";
+            document.getElementById('p6-story').innerText = "教育・医療・介護・地域交通が完全無償化（BS）。断熱とEVで光熱費・燃料代も極小化されているため、増税後も暮らしは圧倒的に安定。";
+        }
+    }
+
+    // 初期実行
+    calcAll();
+</script>
+</body>
+</html>
